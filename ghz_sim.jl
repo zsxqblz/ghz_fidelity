@@ -1,3 +1,13 @@
+function genPlus(nsites::Int64)
+    s = zero(Stabilizer, nsites)
+
+    for i in 1:nsites
+        s[i,i] = (true,false)
+    end
+
+    return s
+end
+
 function genGHZ(nsites::Int64)
     s = zero(Stabilizer, nsites)
 
@@ -54,6 +64,19 @@ function genZZMeas(meas_fidelity::Float64,nsites::Int64)
     return zz_gnd_truth, zz_meas
 end
 
+function genZZErr(zz_str::Vector{Int64},meas_fidelity::Float64,nsites::Int64)
+    zz_err_prob = fidelityToErrProb(meas_fidelity)
+    zz_err_rand = rand(nsites-1)
+    zz_meas = Vector{Int64}(undef,nsites-1)
+
+    for i in 1:(nsites-1)
+        err = zz_err_rand[i]>zz_err_prob ? 1 : -1
+        zz_meas[i] = zz_str[i]*err
+    end
+
+    return zz_meas
+end
+
 function applyDephasing(s::Stabilizer,T2::Float64,n::Float64,meas_t::Float64,nsites::Int64)
     z_err_prob = T2ToErrProb(meas_t,T2,n)
     z_err_rand = rand(nsites)
@@ -98,6 +121,16 @@ function genYStr(nsites::Int64)
     return p
 end
 
+function measureZZ(s::Stabilizer,nsites::Int64)
+    zz_str = Vector{Int64}(undef,nsites-1)
+    for i in 1:(nsites-1)
+        zz_op = single_z(nsites,i)
+        zz_op[i+1] = (false,true)
+        new_s, parity = projectrand!(s,zz_op)
+        zz_str[i] = parity == 0x0 ? 1 : -1
+    end
+    return zz_str
+end
 
 function measurePopulation(s::Stabilizer,nsites::Int64)
     boolStr = Vector{Bool}(undef,nsites)
@@ -126,6 +159,19 @@ function measureCoherence(s::Stabilizer,nsites::Int64)
         return result == 0x0 ? 1 : -1
     end
 
+end
+
+function simGHZ_ZX(meas_fidelity::Float64,T2::Float64,n::Float64,meas_t::Float64,nsites::Int64)
+    s = genPlus(nsites)
+    applyDephasing(s,T2,n,meas_t,nsites)
+    zz_str = measureZZ(s,nsites)
+    zz_meas = genZZErr(zz_str,meas_fidelity,nsites)
+    applyGHZCorrection(s,zz_meas,nsites)
+    
+    population = measurePopulation(copy(s),nsites)
+    coherence = measureCoherence(s,nsites)
+
+    return population,coherence
 end
 
 function simGHZ(meas_fidelity::Float64,T2::Float64,n::Float64,meas_t::Float64,nsites::Int64)
