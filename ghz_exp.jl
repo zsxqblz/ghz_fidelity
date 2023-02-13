@@ -156,3 +156,19 @@ function readData(file_name)
     coherence_std_l = df.coherence_std_l
     return scan_l,population_ave_l,population_std_l,coherence_ave_l,coherence_std_l
 end
+
+function save2DData(scanx_l,scany_l,population_ave_arr,population_std_arr,coherence_ave_arr,coherence_std_arr,file_name)
+    df_scanx = DataFrame()
+    df_scany = DataFrame()
+    df_data = DataFrame()
+    df_scanx.scanx_l = scanx_l
+    df_scany.scany_l = scany_l
+    df_data.population_ave_l = collect(Iterators.flatten(population_ave_arr)) 
+    df_data.population_std_l = collect(Iterators.flatten(population_std_arr))
+    df_data.coherence_ave_l = collect(Iterators.flatten(coherence_ave_arr)) 
+    df_data.coherence_std_l = collect(Iterators.flatten(coherence_std_arr))
+
+    CSV.write(file_name*"_scanx.csv", df_scanx)
+    CSV.write(file_name*"_scany.csv", df_scany)
+    CSV.write(file_name*"_data.csv", df_data)
+end
